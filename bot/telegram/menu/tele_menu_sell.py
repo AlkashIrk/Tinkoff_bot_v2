@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.database.service_for_base import *
-from bot.database.telegram_func import get_base_by_user, force_sell
+from bot.database.telegram_func import force_sell
 from bot.telegram.menu.tele_menu_message import *
 from bot.telegram.menu.telegram_check_user import check_user
 
@@ -27,7 +27,7 @@ def sell_menu(bot, update):
     user_id = check_user(chat_id)
 
     if user_id is not None:
-        #base_name_private = get_base_by_user(user_id)
+        # base_name_private = get_base_by_user(user_id)
         base_name_private = user_id.base
     else:
         return
@@ -51,7 +51,7 @@ def stock_force_sell(bot, update):
     user_id = check_user(chat_id)
 
     if user_id is not None:
-        #base_name_private = get_base_by_user(user_id)
+        # base_name_private = get_base_by_user(user_id)
         base_name_private = user_id.base
     else:
         return
@@ -68,7 +68,6 @@ def stock_force_sell(bot, update):
     user_id = check_user(chat_id)
 
     if user_id is not None:
-        #base_name_private = get_base_by_user(user_id)
         base_name_private = user_id.base
     else:
         return
@@ -90,12 +89,13 @@ def sell_menu_keyboard(base):
     force_sell_count = 0
     keyboard = []
     for stock in lots_to_sell:
-        share_info : InitialShared= lots_to_sell[stock]["object"]
+        share_info: InitialShared = lots_to_sell[stock]["object"]
         if lots_to_sell[stock]["lots"] > 0:
             force_sell_count += 1
             keyboard.append(
                 [InlineKeyboardButton(
-                    "%s (%s шт.)\n+%.2f%s" % (stock, lots_to_sell[stock]["lots"], lots_to_sell[stock]["profit"], CurrencySign.value_of(share_info.currency)),
+                    "%s (%s шт.)\n+%.2f%s" % (stock, lots_to_sell[stock]["lots"], lots_to_sell[stock]["profit"],
+                                              CurrencySign.value_of(share_info.currency)),
                     callback_data="stock_force_sell!%s" % stock)]
             )
 

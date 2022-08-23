@@ -5,7 +5,7 @@ from bot.DB.queries.shared.initial import get_shared_init
 from bot.DB.queries.shared.user import get_user_by_name
 from bot.DB.queries.user.history import get_user_history
 from bot.DB.queries.user.settings import get_user_settings_by_name, set_user_settings_by_name
-from bot.api_v2 import authorize
+from bot.api_v2 import authorize, CurrencySign
 from bot.database import base_sqlite
 from bot.market_operations.special_func import split_by_n
 
@@ -70,8 +70,6 @@ def get_balance_info(base=None) -> History:
     if base is None:
         base = "private"
     db_session = connect(base)
-    data = get_user_history(db_session).order_by(History.id.desc()).first()
-    a = 1
 
     return get_user_history(db_session).order_by(History.id.desc()).first()
 
@@ -102,7 +100,8 @@ def force_sell(ticker: str, user_id: Users):
         db_session = connect("shared")
         row_data: InitialShared = get_shared_init(db_session).filter(InitialShared.figi == ticker_figi).one()
         candle_close = round(row_data.last_price, 2)
-        text_print = "Принудительная продажа %s по %.2f$\n" % (ticker, candle_close)
+        text_print = "Принудительная продажа %s по %.2f%s\n" \
+                     % (ticker, candle_close, CurrencySign.value_of(row_data.currency))
         to_log("\t" + text_print, "logs/all_orders.log", True)
 
         try:
