@@ -1,9 +1,8 @@
 from bot.DB.DB import connect
 from bot.DB.Shared import InitialShared, Users
-from bot.DB.User import SettingsEnum, History
+from bot.DB.User import SettingsEnum
 from bot.DB.queries.shared.initial import get_shared_init
 from bot.DB.queries.shared.user import get_user_by_name
-from bot.DB.queries.user.history import get_user_history
 from bot.DB.queries.user.settings import get_user_settings_by_name, set_user_settings_by_name
 from bot.api_v2 import authorize, CurrencySign
 from bot.database import base_sqlite
@@ -64,14 +63,6 @@ def get_account_id_by_user(user_id):
     if user_id is None or select_users is None:
         return None
     return select_users.account_id
-
-
-def get_balance_info(base=None) -> History:
-    if base is None:
-        base = "private"
-    db_session = connect(base)
-
-    return get_user_history(db_session).order_by(History.id.desc()).first()
 
 
 def force_sell(ticker: str, user_id: Users):

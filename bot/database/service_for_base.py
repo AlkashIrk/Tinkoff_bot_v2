@@ -13,9 +13,9 @@ from bot.DB.queries.user.orders import get_user_orders, stocks_in_deposit, stock
 from bot.DB.queries.user.settings import get_user_settings_by_name
 from bot.api_v2 import authorize, CurrencySign
 from bot.database import base_sqlite
-from bot.database.stat_info import money_profit, user_stat_info
+from bot.database.stat_info import money_profit
 from bot.market_operations.special_func import *
-from bot.model.BalanceInfo import BalanceInfo
+from bot.model.BalanceInfo import BalanceInfo, UserBalance
 
 global_var.init()
 sandbox_token = global_var.sandbox_token
@@ -84,7 +84,8 @@ def rebalance(base=None):
     Уточним среднюю стоймость за 7 дней
     перебераем FIGI всех акций из базы 
     """
-    shares_autobalance = get_user_init(db_session).filter(InitialUser.autobalance == 1, InitialUser.enable_buy == 1).all()
+    shares_autobalance = get_user_init(db_session).filter(InitialUser.autobalance == 1,
+                                                          InitialUser.enable_buy == 1).all()
 
     output_text = []
     for company in shares_autobalance:
@@ -206,9 +207,11 @@ def optimize_base():
 
 
 def calculate_profit(update_base=True):
-    # from test_profit import money_profit
+    """
+    Подсчет прибыльности по итогам дня
+    """
 
-    # обновляем данные по частично выполненым заявкам
+    # обновляем данные по частично выполненным заявкам
     # заявки на покупку
     db_session = connect("private")
     try:
@@ -226,7 +229,6 @@ def calculate_profit(update_base=True):
         for element in buy_orders:
             element: Orders = element
             try:
-                ## TODO debug!
                 element.lot_spent = round(element.money_spent + abs(element.commission_value), 2)
             except:
                 pass
@@ -247,8 +249,6 @@ def calculate_profit(update_base=True):
                 element.money_spent = money_spent.total
 
             try:
-                ## TODO debug!
-                a = 0
                 element.lot_spent = round(element.money_spent * element.executedLots / element.requestedLots
                                           + abs(element.commission_value), 2)
             except:
@@ -257,32 +257,20 @@ def calculate_profit(update_base=True):
     except:
         pass
 
-    info = user_stat_info()
-
-    text = ""
-    for curr in info:
-        data = info.get(curr)
-        if curr == '-':
-            continue
-
-        text = text + "%s:\nСредства в акциях\t%s\nСредства в ордерах\t%s\nСвободные средства\t%s\n\nВсего:\t\t%s\n\n" \
-               % (curr, data.get('money_in_stock'), data.get('money_in_orders'), data.get('free_money'),
-                  data.get('all_money'))
-
-    print(text)
+    info = UserBalance()
+    info_message = info.get_info()
+    for text in info_message:
+        print(text)
 
     """
     Импортируем данные в таблицу
     """
     if update_base:
+        # получаем текущую дату
         if datetime.now().hour <= 5:
             date_select = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
         else:
             date_select = (datetime.now()).strftime("%d.%m.%Y")
-            # exit()
-
-        db_session = connect("private")
-        # history_info: History = get_shared_init(db_session).filter(History.date == date_select).all()
 
         profit_money = money_profit(0, 0)
         data = []
@@ -293,12 +281,12 @@ def calculate_profit(update_base=True):
 
             profit_percent = round(
                 100 * value /
-                (data_app.get('money_in_stock') + data_app.get('money_in_orders') + data_app.get('free_money')), 2)
+                (data_app.money_in_stock + data_app.money_in_orders + data_app.free_money), 2)
 
             row = History(date=date_select,
-                          money_in_stock=data_app.get('money_in_stock'),
-                          money_in_orders=data_app.get('money_in_orders'),
-                          free_money=data_app.get('free_money'),
+                          money_in_stock=data_app.money_in_stock,
+                          money_in_orders=data_app.money_in_orders,
+                          free_money=data_app.free_money,
                           profit_money=value,
                           profit_percent=profit_percent,
                           currency=currency

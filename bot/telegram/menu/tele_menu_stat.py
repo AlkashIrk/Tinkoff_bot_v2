@@ -4,7 +4,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.database.service_for_base import *
 from bot.database.stat_info import money_profit
-from bot.database.telegram_func import get_balance_info
 from bot.telegram.menu.tele_menu_message import *
 from bot.telegram.menu.telegram_check_user import check_user
 
@@ -150,24 +149,16 @@ def balance_submenu(bot, update):
     user_id = check_user(chat_id)
 
     if user_id is not None:
-        # base_name_private = get_base_by_user(user_id)
         base_name_private = user_id.base
     else:
         return
 
-    info = get_balance_info(base=base_name_private)
+    info = UserBalance(base=base_name_private)
+    info_message = info.get_info()
 
-    # TODO переделать под несколько валют
-    if info:
-        money_in_stock = round(info.money_in_stock, 2)
-        money_in_orders = round(info.money_in_orders, 2)
-        free_money = round(info.money_in_orders, 2)
-        all_money = round(money_in_stock + money_in_orders + free_money, 2)
-        data = "Средства в акциях\t%.2f$\nСредства в ордерах\t%.2f$\nСвободные средства\t%.2f$\n\nВсего:\t\t%.2f$" \
-               % (money_in_stock, money_in_orders, free_money, all_money)
-
+    for info_m in info_message:
         message = bot.callback_query.message.reply_text(
-            text=data,
+            text=info_m,
             parse_mode="html",
             disable_web_page_preview=True
         )
@@ -175,7 +166,7 @@ def balance_submenu(bot, update):
         last_message_id = message.message_id
         sleep(0.75)
 
-        redraw_menu(bot)
+    redraw_menu(bot)
 
 
 ############################ Keyboards #########################################
