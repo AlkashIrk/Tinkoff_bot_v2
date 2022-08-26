@@ -7,7 +7,7 @@ from bot.DB.queries.shared.initial import get_shared_init
 from bot.DB.queries.user.initial import get_user_init_by_figi
 from bot.DB.queries.user.orders import get_user_orders
 from bot.api_v2 import CurrencySign
-from bot.cfg.logs_work import debuginfo
+from bot.cfg.logs_work import debuginfo, to_log
 from bot.database.service.re_sell import create_in_base_resell_order
 from bot.database.service.user_increase_balance import increase_min_balance
 from bot.market_operations.special_func import split_by_n
@@ -32,12 +32,29 @@ def check_complete(o: InitialUser):
         # сообщения в телеграм
         currency_sign = CurrencySign.value_of(order.commission_currency)
         if order.operation == "Sell":
+            # TODO переделать на 1 запрос
             # получаем валюту акции
             db_session_shared = connect("shared")
             share_info: InitialShared = get_shared_init(db_session_shared).filter(
                 InitialShared.figi == order.figi).one()
             currency_order = share_info.currency
             db_session_shared.close_session()
+
+            """
+            информация о выполненных сделках по API при высокой нагрузке приходит с задержкой:
+            
+            иногда возвращается 0 число исполненных лотов
+            иногда 0 цена
+            
+            необходимо подождать от 5 до 30 минут
+            """
+            if order.status == "Done" and (order.executedLots == 0 or order.price == 0):
+                text_to_log = "id=%s status=%s price=%s lots=%s" \
+                              % (order.orderID, order.status, order.price, order.executedLots)
+                to_log(text_to_log="\t" + text_to_log,
+                       file_name="logs/debug_%s.log" % order.figi,
+                       time_to_log=True)
+                continue
 
             # частичное исполнение
             if order.requestedLots != order.executedLots:
@@ -108,7 +125,7 @@ def check_complete(o: InitialUser):
                 print("\t%s" % inst)
 
         #   ИЗМЕНЯЕМ КВОТУ В БАЗЕ
-        #   при наличии недопроданных акций пересоздаем ордер
+        #   при наличии не допроданных акций пересоздаем ордер
         if order.operation == "Sell":
             stock_param.buy += order.executedLots
             # ордер для допродажи

@@ -1,16 +1,12 @@
 from tinkoff.invest import Operation
 
-from bot.DB.DB import connect
 from bot.api_v2 import get_value_from_quo, get_status, round_price
 from bot.cfg.logs_work import debuginfo
 from bot.database import base_sqlite as base_sqlite
 from bot.model.OrderInfo import OrderInfo
 
-order_info = OrderInfo()
-
 
 def get_obj(order: Operation) -> OrderInfo:
-    global order_info
     order_info = OrderInfo()
 
     # тип заявки
@@ -105,7 +101,10 @@ def get_obj(order: Operation) -> OrderInfo:
     return order_info
 
 
-def edit_order_commission(o):
+def edit_order_commission(o: OrderInfo):
+    """
+    Обновляем информацию о комиссии сделки
+    """
     try:
         order_in_base = base_sqlite.select(
             what="id, orderId, figi, operation, money_spent, lot_spent",
@@ -174,16 +173,8 @@ def edit_order_commission(o):
 
 
 def edit_order_v2(order):
-    global min_profit
-    global order_info
-
     order_info = get_obj(order)
-    order_str = "32352996890"
 
-    if order_info.tinkoff_order_id == order_str or order_info.parent_id == order_str:
-        a = 0
-
-    # print("ID=%s\n\t%s" % (order.id, order_info.type))
     if order_info.type == 'Удержание комиссии за операцию':
         edit_order_commission(order_info)
         return
@@ -217,17 +208,9 @@ def edit_order_v2(order):
 
 
 def buy_order(order):
-    # определяем минимальный профит с акции
-    try:
-        db_session = connect("private")
-        # min_profit = get_user_settings_by_name(db_session, SettingsEnum.min_profit).value
-        # min_profit2 = get_min_profit()
-        db_session.close_session()
-    except Exception as inst:
-        debuginfo("Error here")
-        print("\t%s" % inst)
-        # min_profit = def_minimal_profit
-
+    """
+    Обновление в БД сделки о покупке
+    """
     data_up = (
         order.status,
         order.req_lots, order.done_lots,
@@ -255,6 +238,9 @@ def buy_order(order):
 
 
 def sell_order(order):
+    """
+    Обновление в БД сделки о продаже
+    """
     data_up = (
         order.status,
         order.req_lots, order.done_lots,
