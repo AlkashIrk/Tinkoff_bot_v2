@@ -21,17 +21,16 @@ from ta.volatility import KeltnerChannel
 
 global_var.init()
 
-
-# осциляторы по акциям
+# осцилляторы по акциям
 intraday_data = {}
-
+# исторические свечи (в понедельник утром - мало расчетных данных)
 historic_candle = {}
 
 
-def append_space(input_str: str, lenght=8):
+def append_space(input_str: str, length=8):
     input_len = len(input_str)
-    if input_len < lenght:
-        output_str = input_str + " " * (lenght - input_len)
+    if input_len < length:
+        output_str = input_str + " " * (length - input_len)
     else:
         output_str = input_str
     return output_str
@@ -156,8 +155,6 @@ def select_info(company, day_delta=None):
         "date_to": date_to
     }
 
-    # date_from = date_from.isoformat()
-    # date_to = date_to.isoformat()
     with authorize(token=global_var.token) as client:
         response = client.market_data.get_candles(
             figi=company_figi,
@@ -228,8 +225,10 @@ def calculate_signals_new(args=[]):
             df = pd.DataFrame(
                 list(zip(price_open, price_close, price_low, price_high, volume_price)),
                 columns=["o", "c", "l", "h", "v"]
-
             )
+
+            # path_csv = "/%s.csv" % company_name
+            # df.to_csv(path_csv, sep='\t', encoding='utf-8', index=False)
 
             inficator_rsi = RSIIndicator(
                 close=df["c"],
@@ -302,13 +301,15 @@ def calculate_signals_new(args=[]):
 
             print("%s" % company_name)
             signal_sto = append_space(signal_sto)
-            print("\tSTOCH\t- %s\t(%s -> %s)" % (signal_sto, sto_pre_last, sto_last))
+            print("\tSTOCH\t- %s\t(%.2f -> %.2f)" % (signal_sto, sto_pre_last, sto_last))
 
             signal_rsi = append_space(signal_rsi)
-            print("\tRSI\t- %s\t(%s -> %s)" % (signal_rsi, rsi_pre_last, rsi_last))
+            print("\tRSI\t- %s\t(%.2f -> %.2f)" % (signal_rsi, rsi_pre_last, rsi_last))
 
             signal_uo = append_space(signal_uo)
-            print("\tUO\t- %s\t(%s -> %s)" % (signal_uo, uo_pre_last, uo_last))
+            print("\tUO\t- %s\t(%.2f -> %.2f)" % (signal_uo, uo_pre_last, uo_last))
+
+            print("\tKELTNER\t- %s\t(%s -> %s)" % ("         ", keltner_pre_last, keltner_last))
 
             if send_intraday:
                 share_signal = Signals(instriment_name=company_name)
@@ -359,17 +360,10 @@ else:
 if args.debug:
     debug_mode: str = args.debug
     if debug_mode.upper() == "ON":
-        db_session_shared = connect("shared")
-        sha: InitialShared = get_shared_init(db_session_shared).filter(InitialShared.ticker == "MAC").one()
-        #
-        # last_data = sha.last_data
-        #
-        # temp = datetime.strptime(last_data, '%Y-%m-%d %H:%M:%S').timestamp()
+        company_name = "SGZH"
 
-        # sha.intraday_last_send = int(time.time())
-        # db_session_shared.commit_session()
-        # a = global_var.telegram_token
-        # send_message(sha)
+        db_session_shared = connect("shared")
+        sha: InitialShared = get_shared_init(db_session_shared).filter(InitialShared.ticker == company_name).one()
 
         signals = {
             "STOCH": {"last": 40, "new": 0},

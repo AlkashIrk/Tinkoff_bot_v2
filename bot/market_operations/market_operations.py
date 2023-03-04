@@ -63,7 +63,6 @@ def create_request(client, account_id: str, figi: str, lots: int, operation, ord
     except:
         pass
 
-    ##TODO for version v2
     if operation == "Buy":
         direction = OrderDirection.ORDER_DIRECTION_BUY
     elif operation == "Sell":
@@ -381,7 +380,7 @@ def update_portfolio(client, to_file=False, user=None, days_delta=None):
     # timezone нужно указывать. Иначе - ошибка
     d2 = datetime.now(tz=timezone("Europe/Moscow"))
     # По настоящее время
-    ##TODO for version v2
+
     ops = client.operations.get_operations(account_id=account_id, from_=d1, to=d2)
 
     try:

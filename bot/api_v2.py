@@ -12,6 +12,7 @@ class CurrencySign(Enum):
     USD = "$"
     RUB = "₽"
     EUR = "€"
+
     @classmethod
     def value_of(cls, value):
         for k, v in cls.__members__.items():
@@ -75,7 +76,7 @@ def get_status(status):
 def get_min_max_price(token: str, figi=str):
     """
 
-        """
+    """
     price = {}
     with authorize(token) as client:
         data = client.market_data.get_order_book(figi=figi, depth=10)

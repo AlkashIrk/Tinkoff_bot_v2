@@ -10,55 +10,32 @@ from bot.DB.queries.shared.initial import get_shared_init
 from bot.DB.queries.user.orders import get_user_orders
 
 
-class UserStatInfo:
-    def __init__(self):
-        self.operation = str
-        self.type = str
-        self.parent_id = str
-        self.base_id = int
-        self.tinkoff_order_id = str
-        self.req_lots = int
-        self.done_lots = int
-        self.currency = str
-        self.commission = float
-        self.price = float
-        self.money_spent = float
-        self.status = str
-        self.figi = str
-        self.ticker = str
-
-
-
 def money_profit(today_open=0, today_close=0, base=None):
     """"
-    Подсчет суммы
+    Подсчет суммы закрытых сделок в плюс
     """
     if base is None:
         base = "private"
 
     db_session = connect(base)
 
+    time_today = datetime.now()
+    year_today = time_today.year
+    month_today = time_today.month
+    day_today = time_today.day
+    d1 = datetime(year_today, month_today, day_today, 0, 0, 0, tzinfo=timezone("Europe/Moscow"))
+
     if today_open == 0:
-        time_today = datetime.now()
-        year_today = time_today.year
-        month_yoday = time_today.month
-        day_today = time_today.day
-        d1 = datetime(year_today, month_yoday, day_today, 0, 0, 0, tzinfo=timezone("Europe/Moscow"))
         d1 = d1 - timedelta(days=1)
         today_open = datetime.timestamp(d1)
     if today_open == 1:
-        time_today = datetime.now()
-        year_today = time_today.year
-        month_yoday = time_today.month
-        day_today = time_today.day
-        d1 = datetime(year_today, month_yoday, day_today, 0, 0, 0, tzinfo=timezone("Europe/Moscow"))
         today_open = datetime.timestamp(d1)
 
     if today_close == 0:
         today_close = round(time.time(), 0)
 
     if today_close == -1:
-        d2 = datetime(year_today, month_yoday, day_today, 2, 0, 0, tzinfo=timezone("Europe/Moscow"))
+        d2 = datetime(year_today, month_today, day_today, 2, 0, 0, tzinfo=timezone("Europe/Moscow"))
         today_close = datetime.timestamp(d2)
 
     orders_done = get_user_orders(db_session).filter(
@@ -72,6 +49,7 @@ def money_profit(today_open=0, today_close=0, base=None):
     share_info: InitialShared = get_shared_init(db_session_shared).all()
     db_session_shared.close_session()
 
+    # лотность акций
     share_dict = {}
     for share in share_info:
         share: InitialShared = share
