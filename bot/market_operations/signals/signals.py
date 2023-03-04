@@ -14,8 +14,10 @@ from bot.DB.queries.shared.initial import get_shared_init
 from bot.api_v2 import authorize, get_value_from_quo
 from bot.cfg.parse_params import get_params
 from bot.market_operations.signals.sign_intraday import sign_intraday
+from bot.model.Signals import Signals, InstrumentSignals, Signal
 from bot.settings import threads_count, send_intraday
 from ta.momentum import RSIIndicator, StochasticOscillator, UltimateOscillator
+from ta.volatility import KeltnerChannel
 
 global_var.init()
 
@@ -250,6 +252,22 @@ def calculate_signals_new(args=[]):
 
             df["UO"] = indicator_uo.ultimate_oscillator()
 
+            sig_KeltnerChannel = KeltnerChannel(
+                high=df['h'],
+                low=df['l'],
+                close=df['c'],
+                window=20,
+                original_version=False,
+                window_atr=1
+            )
+
+            candle_k_l = sig_KeltnerChannel.keltner_channel_lband()
+            # candle_k_h = sig_KeltnerChannel.keltner_channel_hband()
+            # candle_k_l_2 = sig_KeltnerChannel.keltner_channel_lband_indicator()
+
+            keltner_last = round(candle_k_l.iloc[-1], 3)
+            keltner_pre_last = round(candle_k_l.iloc[-2], 3)
+
             try:
                 last_signal = base_sqlite.select(
                     what="sig_stoch, sig_RSI, sig_UO",
@@ -293,12 +311,26 @@ def calculate_signals_new(args=[]):
             print("\tUO\t- %s\t(%s -> %s)" % (signal_uo, uo_pre_last, uo_last))
 
             if send_intraday:
-                signals = {
-                    "STOCH": {"last": sto_last, "new": sto_pre_last},
-                    "RSI": {"last": rsi_last, "new": rsi_pre_last},
-                    "UO": {"last": uo_last, "new": uo_pre_last}
-                }
-                intraday_data.update({company_name: signals})
+                share_signal = Signals(instriment_name=company_name)
+
+                rsi = Signal(name=InstrumentSignals.RSI, last_value=rsi_last, previous_value=rsi_pre_last)
+                share_signal.append(rsi)
+
+                stoch = Signal(name=InstrumentSignals.STOCH, last_value=sto_pre_last, previous_value=sto_last)
+                share_signal.append(stoch)
+
+                uo = Signal(name=InstrumentSignals.UO, last_value=uo_last, previous_value=uo_pre_last)
+                share_signal.append(uo)
+
+                keltner = Signal(name=InstrumentSignals.Keltner, last_value=keltner_last,
+                                 previous_value=keltner_pre_last)
+                share_signal.append(keltner)
+
+                candel = Signal(name=InstrumentSignals.candels, last_value=df['c'].iloc[-1],
+                                previous_value=df['c'].iloc[-2])
+                share_signal.append(candel)
+
+                intraday_data.update({company_name: share_signal})
 
     base_sqlite.update_data(
         table="initial",
@@ -345,5 +377,24 @@ if args.debug:
             "UO": {"last": 50, "new": 0}
         }
 
-        intraday_data.update({"SGZH": signals})
-        sign_intraday(intraday_data)
+        share_signal_dbg = Signals(instriment_name=company_name)
+
+        rsi = Signal(name=InstrumentSignals.RSI, last_value=0, previous_value=50)
+        share_signal_dbg.append(rsi)
+
+        stoch = Signal(name=InstrumentSignals.STOCH, last_value=0, previous_value=50)
+        share_signal_dbg.append(stoch)
+
+        uo = Signal(name=InstrumentSignals.UO, last_value=0, previous_value=50)
+        share_signal_dbg.append(uo)
+
+        keltner = Signal(name=InstrumentSignals.Keltner, last_value=20,
+                         previous_value=20)
+        share_signal_dbg.append(keltner)
+
+        candel = Signal(name=InstrumentSignals.candels, last_value=10,
+                        previous_value=20)
+        share_signal_dbg.append(candel)
+
+        intraday_data.update({company_name: share_signal_dbg})
+        # sign_intraday(intraday_data)
