@@ -52,81 +52,82 @@ def recreate_sell_order(base, ticker_figi, token, account_id, ticker, telegram_i
                     base=base
                 )
 
-            text_print = "Recreate order: \n\t%s\t\t(id=%s)\n\tSell price: %.2f$\n\tCount: %s" \
-                         % (ticker, split_by_n(order_id_new, 4), order_price, order_lots)
-            to_log("\t" + text_print, "logs/%s_orders.log" % ticker, True)
+            if order_id_new != -1:
+                text_print = "Recreate order: \n\t%s\t\t(id=%s)\n\tSell price: %.2f$\n\tCount: %s" \
+                             % (ticker, split_by_n(order_id_new, 4), order_price, order_lots)
+                to_log("\t" + text_print, "logs/%s_orders.log" % ticker, True)
 
-            """
-            Отправим оповещение и обновим значение в таблице
-            """
-            if first_mess_id is not None:
-                mess_id = send_to_telegram(text_print,
-                                           chat_id=telegram_id,
-                                           reply_to=first_mess_id)
-            else:
-                mess_id = send_to_telegram(text_print, chat_id=telegram_id)
+                """
+                Отправим оповещение и обновим значение в таблице
+                """
+                if first_mess_id is not None:
+                    mess_id = send_to_telegram(text_print,
+                                               chat_id=telegram_id,
+                                               reply_to=first_mess_id)
+                else:
+                    mess_id = send_to_telegram(text_print, chat_id=telegram_id)
 
-            if mess_id is not None:
+                if mess_id is not None:
+                    try:
+                        base_sqlite.command_adw(
+                            what="UPDATE orders "
+                                 "set telegram_mess_id='%s' "
+                                 "where orderId='%s'"
+                                 % (mess_id, order_id_new),
+                            base=base
+                        )
+                    except:
+                        pass
+
+                for order in orders_declined:
+                    order_id = order[0]
+                    order_price = order[1]
+                    order_lots = order[2]
+                    sell_order_id_old = order[3]
+                    money_spent += order[4]
+                    data_up = (
+                        order_id,
+                    )
+                    data_up = [tuple(data_up)]
+
+                    """
+                    Обновим цепочку продажи ордеров
+                    """
+                    try:
+                        base_sqlite.command_adw(
+                            what="UPDATE orders "
+                                 "set sell_order='%s' "
+                                 "where sell_order='%s'"
+                                 % (order_id_new, sell_order_id_old),
+                            base=base
+                        )
+                    except:
+                        pass
+
+                    base_sqlite.update_data(
+                        table="orders",
+                        expression="set retry=1 WHERE orderId=?",
+                        data=data_up,
+                        base=base
+                    )
+
+                    text_print = "Recreate order: \n\t\t\tSell price: %.2f$\n\t\t\tCount: %s" \
+                                 % (order_price, order_lots)
+                    to_log("\t\t" + text_print, "logs/%s_orders.log" % ticker)
+
+                    # send_to_telegram(text_print)
+
+                # обновим в базе стоймость потраченных средств
                 try:
                     base_sqlite.command_adw(
                         what="UPDATE orders "
-                             "set telegram_mess_id='%s' "
+                             "set money_spent='%s' "
                              "where orderId='%s'"
-                             % (mess_id, order_id_new),
+                             % (money_spent, order_id_new),
                         base=base
                     )
                 except:
                     pass
-
-            for order in orders_declined:
-                order_id = order[0]
-                order_price = order[1]
-                order_lots = order[2]
-                sell_order_id_old = order[3]
-                money_spent += order[4]
-                data_up = (
-                    order_id,
-                )
-                data_up = [tuple(data_up)]
-
-                """
-                Обновим цепочку продажи ордеров
-                """
-                try:
-                    base_sqlite.command_adw(
-                        what="UPDATE orders "
-                             "set sell_order='%s' "
-                             "where sell_order='%s'"
-                             % (order_id_new, sell_order_id_old),
-                        base=base
-                    )
-                except:
-                    pass
-
-                base_sqlite.update_data(
-                    table="orders",
-                    expression="set retry=1 WHERE orderId=?",
-                    data=data_up,
-                    base=base
-                )
-
-                text_print = "Recreate order: \n\t\t\tSell price: %.2f$\n\t\t\tCount: %s" \
-                             % (order_price, order_lots)
-                to_log("\t\t" + text_print, "logs/%s_orders.log" % ticker)
-
-                # send_to_telegram(text_print)
-
-            # обновим в базе стоймость потраченных средств
-            try:
-                base_sqlite.command_adw(
-                    what="UPDATE orders "
-                         "set money_spent='%s' "
-                         "where orderId='%s'"
-                         % (money_spent, order_id_new),
-                    base=base
-                )
-            except:
-                pass
 
         except Exception as inst:
             print("\tCant recreate orders for %s" % ticker)
