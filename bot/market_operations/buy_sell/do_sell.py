@@ -95,7 +95,7 @@ def do_sell(o: OrderParam, user_vars):
             )
 
         # если получили номер заявки - отправляем в телеграм
-        if order_id != -1:
+        if order_id is not None and order_id != -1:
             text_print = "Ордер: \n\t%s\t\t(id=%s)\n\t%s min price: %.2f%s\n\tcount: %s\n" \
                          % (o.ticker, split_by_n(order_id, 4), "Sell", min_target, currency_sign, lots_to_sell)
             to_log("\t" + text_print, "logs/%s_orders.log" % o.ticker, True)

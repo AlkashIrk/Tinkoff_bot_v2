@@ -83,8 +83,6 @@ def create_request(client, account_id: str, figi: str, lots: int, operation, ord
             send_to_telegram(message=message)
             print(message)
 
-            #return
-            ##TODO получение лимита пока сделано с шагом в 0.01
             time.sleep(1)
             try:
                 new_price = order_price_target - share_info.minPriceIncrement
