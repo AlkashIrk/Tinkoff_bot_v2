@@ -1,10 +1,10 @@
 # Refactored
-from bot.database import base_sqlite
 from bot.api_v2 import authorize
 from bot.cfg.logs_work import to_log, debuginfo
+from bot.database import base_sqlite
 from bot.market_operations.market_operations import create_request
-from bot.telegram.send_to_telegram import send_to_telegram
 from bot.market_operations.special_func import split_by_n
+from bot.telegram.send_to_telegram import send_to_telegram
 
 
 def recreate_sell_order(base, ticker_figi, token, account_id, ticker, telegram_id):
@@ -52,7 +52,7 @@ def recreate_sell_order(base, ticker_figi, token, account_id, ticker, telegram_i
                     base=base
                 )
 
-            if order_id_new != -1:
+            if order_id_new is not None and order_id_new != -1:
                 text_print = "Recreate order: \n\t%s\t\t(id=%s)\n\tSell price: %.2f$\n\tCount: %s" \
                              % (ticker, split_by_n(order_id_new, 4), order_price, order_lots)
                 to_log("\t" + text_print, "logs/%s_orders.log" % ticker, True)
